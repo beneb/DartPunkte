@@ -1,6 +1,6 @@
 # TODO: Dart-Zähler 301
 
-Stand: 2026-10-12. Alle 5 Schritte umgesetzt und geprüft (auch auf Android + Firefox). Offen sind nur die Punkte unter „Später“.
+Stand: 2026-10-12. Alle 5 Schritte umgesetzt und geprüft (auch auf Android + Firefox). Offen sind die Prüfungen oben und die Punkte unter „Als Nächstes“.
 
 Details zu jedem Schritt in `PLAN-dartzaehler.md`.
 
@@ -50,10 +50,33 @@ Details zu jedem Schritt in `PLAN-dartzaehler.md`.
       Aufblitzen + kurzes Vibrieren als Rückmeldung
   - [ ] Geprüft auf dem Handy
 
-## Später
+## Als Nächstes
 
-- [ ] Seite kostenlos auf GitHub Pages ins Internet stellen, damit sie per URL
-      erreichbar ist und als Icon auf den Startbildschirm gelegt werden kann.
-      Schritt-für-Schritt-Anleitung (Konto anlegen ohne echten Namen und private
-      E-Mail, Git umstellen, pushen, Pages einschalten): [`todo_github.md`](todo_github.md)
-- [ ] Optional: installierbare Offline-App (PWA) mit Manifest und Service Worker
+- [ ] **GitHub Pages fertig einrichten.** Repo `beneb/DartPunkte` ist angelegt und
+      gepusht. Offen sind die Punkte in [`todo_github.md`](todo_github.md):
+  - [ ] Pages einschalten (Settings → Pages → Deploy from a branch → `main` / root)
+  - [ ] `https://beneb.github.io/DartPunkte/` auf dem Handy testen und installieren
+        (Android Chrome/Firefox: Menü ⋮ → „App installieren“ bzw. „Zum
+        Startbildschirm hinzufügen“; iPhone Safari: Teilen → „Zum Home-Bildschirm“)
+  - [ ] GitHub-Profil: echten Namen bei „Public profile“ entfernen
+  - [ ] Zwei-Faktor-Anmeldung einrichten, Recovery-Codes speichern
+- [ ] **Entscheiden: Notizen öffentlich lassen?** `TODO.md`, `todo_github.md`,
+      `PLAN-dartzaehler.md` und `GIT-GRUNDLAGEN.md` sind im öffentlichen Repo lesbar.
+      Falls nicht gewünscht: in `.gitignore` aufnehmen und mit
+      `git rm --cached …` aus dem Repo nehmen (bleiben lokal erhalten). Sollen sie auch
+      aus der Historie verschwinden, ist ein `git push --force` nötig.
+- [ ] **Offline spielbar (Service Worker).** Ohne ihn startet die App ohne Internet
+      nur zufällig aus dem Browser-Cache.
+  - [ ] Neue Datei `sw.js` (ca. 30 Zeilen): speichert `index.html`,
+        `manifest.webmanifest`, `icon-192.png`, `icon-512.png` beim ersten Öffnen
+  - [ ] Strategie **network-first**: mit Internet immer den neuesten Stand von GitHub
+        holen, nur ohne Netz die gespeicherte Kopie nehmen. So kommen Updates nach
+        `git push` weiterhin beim nächsten Öffnen an
+  - [ ] Service Worker in `index.html` anmelden (`navigator.serviceWorker.register`)
+  - [ ] Geprüft: App einmal mit Internet öffnen, dann Flugmodus → App startet trotzdem
+  - [ ] Geprüft: Änderung pushen → erscheint beim nächsten Öffnen mit Internet
+- [ ] **iPhone-Icon:** `<link rel="apple-touch-icon" href="icon-192.png">` in den
+      `<head>` von `index.html`, sonst zeigt iOS ein Bildschirmfoto als Icon -> EB kann es testen?
+- [ ] **git wie:** wie kann ich mir am besten ein git diff anschauen von allen meinen änderungen, ist terminal ausreichend?
+
+
