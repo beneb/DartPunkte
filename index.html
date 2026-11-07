@@ -1,0 +1,1039 @@
+<!doctype html>
+<!--
+  Dart 301 – Punktezähler
+  © 2026 beneb. Alle Rechte vorbehalten.
+  Gilt für den Code und die App-Icons (icon-192.png, icon-512.png).
+  Kopieren, Verändern, Weitergeben oder Veröffentlichen – auch in Teilen –
+  nur mit schriftlicher Erlaubnis des Urhebers. Siehe LICENSE.
+-->
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101310">
+  <title>Dart 301</title>
+  <!-- Manifest: als installierte App (Android/Chrome) nur Hochformat -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101310;
+      --surface: #1b1f1b;
+      --surface-2: #262b26;
+      --line: #323832;
+      --text: #eef2ee;
+      --muted: #8f998f;
+      --accent: #35c26a;
+      --accent-text: #06210f;
+      --danger: #ff5d5d;
+      --mult: #6cc8ff;      /* Double/Triple-Buttons */
+      --mult-text: #04263a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;   /* kein Pull-to-refresh */
+      touch-action: manipulation;  /* kein Zoom durch Doppeltippen, Pinch-Zoom bleibt */
+    }
+
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; user-select: none; }
+    #game, #result { user-select: none; } /* langes Drücken markiert keinen Text */
+
+    .screen {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .screen[hidden] { display: none; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .title { margin: 0; font-size: 1.5rem; font-weight: 700; }
+
+    .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 12px 16px; }
+
+    .footer {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+    }
+    .copyright {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    /* Startbildschirm */
+    .name-list { list-style: none; margin: 0; padding: 0; }
+    .name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .name-row input {
+      flex: 1;
+      min-width: 0;
+      height: 48px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      font-size: 1.1rem;
+    }
+    .name-row input::placeholder { color: var(--muted); }
+    .name-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+
+    .icon-btn {
+      flex: none;
+      width: 44px;
+      height: 48px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--surface-2);
+      font-size: 1.2rem;
+    }
+    .icon-btn:disabled { opacity: 0.3; cursor: default; }
+    .icon-btn.invisible { visibility: hidden; }
+
+    .add-btn {
+      width: 100%;
+      height: 48px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+    }
+    .add-btn[hidden] { display: none; }
+
+    .btn {
+      height: 52px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--surface-2);
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .btn-primary {
+      height: 60px;
+      background: var(--accent);
+      color: var(--accent-text);
+      font-size: 1.25rem;
+    }
+
+    /* Spielbildschirm */
+    .header-btn {
+      height: 44px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--surface-2);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .header-btn:disabled { opacity: 0.3; cursor: default; }
+
+    .player-list { list-style: none; margin: 0; padding: 0; }
+    .player {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 12px;
+      border-left: 4px solid transparent;
+      border-radius: 10px;
+    }
+    .player.active { background: rgba(53, 194, 106, 0.14); border-left-color: var(--accent); }
+    .player.active .player-name { font-weight: 700; }
+    .player.done { opacity: 0.45; }
+    .player-name {
+      min-width: 0;
+      overflow: hidden;
+      font-size: 1.15rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-score {
+      font-size: 1.8rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+    }
+    .status {
+      min-height: 1.5em;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 1.05rem;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .status.error { color: var(--danger); font-weight: 600; }
+    .status.success { color: var(--accent); font-weight: 600; }
+
+    .input-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 56px;
+      border-radius: 12px;
+      background: var(--surface);
+      font-size: 2.2rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .input-display.empty { color: var(--muted); }
+
+    /* Anzeige mit 2x/3x links und rechts, gleiche Spalten wie der Ziffernblock */
+    .input-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .input-row .key { height: 56px; }
+    .key.mult {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--mult);
+    }
+    .key.mult b { font-size: 1.5rem; }
+    .key.mult small {
+      margin-top: 3px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .key.mult.active { background: var(--mult); border-color: var(--mult); color: var(--mult-text); }
+    .key.mult.active small { color: var(--mult-text); }
+
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .key {
+      height: clamp(52px, 9vh, 72px);
+      border: 0;
+      border-radius: 12px;
+      background: var(--surface-2);
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    .key:active { filter: brightness(1.4); }
+    /* Ziffernblock: keine Wisch-/Zoom-Gesten, kein Kontextmenü bei langem Drücken */
+    .keypad, .input-row { touch-action: none; -webkit-touch-callout: none; }
+    /* Kurzes Aufblitzen nach jedem Tipp (per JS gesetzt, :active ist auf Handys unzuverlässig) */
+    .key.pressed { animation: key-flash 0.18s ease-out; }
+    @keyframes key-flash {
+      from { filter: brightness(1.8); transform: scale(0.95); }
+      to   { filter: none; transform: none; }
+    }
+    .key:disabled { opacity: 0.3; cursor: default; }
+    .key-ok { background: var(--accent); color: var(--accent-text); }
+
+    .player-score.place { font-size: 1.1rem; font-weight: 600; }
+
+    /* Finish-Dialog */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.7);
+    }
+    .overlay[hidden] { display: none; }
+    .dialog {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 360px;
+      padding: 20px;
+      border-radius: 16px;
+      background: var(--surface);
+    }
+    .dialog-title {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+    .link-btn {
+      height: 44px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    /* Ergebnis */
+    .ranking .player { justify-content: flex-start; padding: 8px 12px; }
+    .rank-place {
+      flex: none;
+      width: 2.2em;
+      color: var(--muted);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .rank-first .player-name, .rank-first .rank-place { color: var(--accent); font-weight: 700; }
+    .rank-rest { flex: none; margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    /* Hinweis im Querformat: nur auf Handys (niedrige Höhe), deckt alles ab */
+    #rotate-hint { display: none; }
+    @media (orientation: landscape) and (max-height: 500px) {
+      #rotate-hint {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 16px;
+        background: var(--bg);
+        text-align: center;
+        user-select: none;
+      }
+    }
+    .rotate-icon { font-size: 3.5rem; line-height: 1; }
+    .rotate-text { margin: 0; font-size: 1.25rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <section id="setup" class="screen">
+    <header class="topbar">
+      <h1 class="title">🎯 301</h1>
+    </header>
+    <div class="scroll">
+      <ol id="name-list" class="name-list"></ol>
+      <button id="add-player" class="add-btn" type="button">+ Spieler hinzufügen</button>
+    </div>
+    <footer class="footer">
+      <button id="shuffle" class="btn" type="button">🔀 Mischen</button>
+      <button id="start-game" class="btn btn-primary" type="button">Spiel starten</button>
+      <p class="copyright">© 2026 beneb · Alle Rechte vorbehalten</p>
+    </footer>
+  </section>
+
+  <section id="game" class="screen" hidden>
+    <header class="topbar">
+      <button id="new-game" class="header-btn" type="button">Neues Spiel</button>
+      <button id="undo" class="header-btn" type="button">↶ Rückgängig</button>
+    </header>
+    <div class="scroll">
+      <ol id="player-list" class="player-list"></ol>
+    </div>
+    <div class="panel">
+      <div id="status" class="status" aria-live="polite"></div>
+      <div class="input-row">
+        <button id="mult-2" class="key mult" type="button" data-mult="2" aria-pressed="false" aria-label="Double"><b>D</b><small>Double</small></button>
+        <div id="input-display" class="input-display"></div>
+        <button id="mult-3" class="key mult" type="button" data-mult="3" aria-pressed="false" aria-label="Triple"><b>T</b><small>Triple</small></button>
+      </div>
+      <div id="keypad" class="keypad">
+        <button class="key" type="button" data-key="1">1</button>
+        <button class="key" type="button" data-key="2">2</button>
+        <button class="key" type="button" data-key="3">3</button>
+        <button class="key" type="button" data-key="4">4</button>
+        <button class="key" type="button" data-key="5">5</button>
+        <button class="key" type="button" data-key="6">6</button>
+        <button class="key" type="button" data-key="7">7</button>
+        <button class="key" type="button" data-key="8">8</button>
+        <button class="key" type="button" data-key="9">9</button>
+        <button class="key" type="button" data-key="Backspace" aria-label="Löschen">⌫</button>
+        <button class="key" type="button" data-key="0">0</button>
+        <button class="key key-ok" type="button" data-key="Enter">OK</button>
+      </div>
+    </div>
+
+    <div id="finish-dialog" class="overlay" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="finish-title">
+        <p id="finish-title" class="dialog-title"></p>
+        <button id="continue-game" class="btn btn-primary" type="button"></button>
+        <button id="end-game" class="btn" type="button">Spiel beenden</button>
+        <button id="dialog-undo" class="link-btn" type="button">↶ Rückgängig</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="result" class="screen" hidden>
+    <header class="topbar">
+      <h1 class="title">🏆 Ergebnis</h1>
+      <button id="result-undo" class="header-btn" type="button">↶ Rückgängig</button>
+    </header>
+    <div class="scroll">
+      <ol id="ranking" class="player-list ranking"></ol>
+    </div>
+    <footer class="footer">
+      <button id="rematch" class="btn btn-primary" type="button">Revanche</button>
+      <button id="result-new-game" class="btn" type="button">Neues Spiel</button>
+    </footer>
+  </section>
+
+  <div id="rotate-hint" aria-live="polite">
+    <div class="rotate-icon" aria-hidden="true">📱</div>
+    <p class="rotate-text">Bitte Handy hochkant halten</p>
+  </div>
+
+  <!-- Spiellogik: reine Funktionen ohne DOM-Zugriff -->
+  <script id="logic">
+    const START_SCORE = 301;
+    const MIN_PLAYERS = 2;
+    const MAX_PLAYERS = 8;
+    const MAX_NAME_LENGTH = 15;
+
+    function placeholderName(index) {
+      return `Spieler ${index + 1}`;
+    }
+
+    // Bringt gespeicherte Namen in eine gültige Form: 2–8 Einträge, jeweils ein String.
+    function normalizeNames(value) {
+      const names = Array.isArray(value)
+        ? value.filter((v) => typeof v === 'string').map((v) => v.slice(0, MAX_NAME_LENGTH))
+        : [];
+      while (names.length < MIN_PLAYERS) names.push('');
+      return names.slice(0, MAX_PLAYERS);
+    }
+
+    // Eingegebene Namen → Spielernamen; leere Felder werden zu „Spieler N“.
+    function resolveNames(rawNames) {
+      return rawNames.map((raw, i) => raw.trim().slice(0, MAX_NAME_LENGTH) || placeholderName(i));
+    }
+
+    function moveItem(list, from, to) {
+      const copy = list.slice();
+      if (to < 0 || to >= copy.length || from === to) return copy;
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    }
+
+    function shuffle(list, random = Math.random) {
+      const copy = list.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    // Mischt so lange, bis sich die Reihenfolge sichtbar ändert – bei zwei Spielern
+    // wirkte der Knopf sonst in jedem zweiten Fall kaputt.
+    function shuffleChanged(list, random = Math.random) {
+      const sameOrder = (a) => a.every((item, i) => item === list[i]);
+      const canChange = new Set(list).size > 1;
+      let result = shuffle(list, random);
+      for (let tries = 0; canChange && sameOrder(result) && tries < 20; tries++) {
+        result = shuffle(list, random);
+      }
+      return result;
+    }
+
+    // --- Spiel ---
+
+    const DARTS_PER_TURN = 3;
+
+    // Mit einem Pfeil erreichbar: 0–20 (Single), 25/50 (Bull), Doubles bis 40, Triples bis 60.
+    function isValidScore(score) {
+      if (!Number.isInteger(score) || score < 0) return false;
+      return score <= 20 || score === 25 || score === 50
+        || (score <= 40 && score % 2 === 0) || (score <= 60 && score % 3 === 0);
+    }
+
+    // Ein Spiel besteht nur aus Spielernamen, der Liste aller einzelnen Pfeile und den
+    // Entscheidungen im Finish-Dialog; alles andere berechnet computeState daraus.
+    //   continuedAt – Anzahl Pfeile, bei der zuletzt „Weiterspielen“ gewählt wurde
+    //   ended       – „Spiel beenden“ wurde gewählt
+    function createGame(players) {
+      return { players: players.slice(), darts: [], continuedAt: null, ended: false };
+    }
+
+    function addDart(game, score) {
+      return { ...game, darts: [...game.darts, score] };
+    }
+
+    function continueGame(game) {
+      return { ...game, continuedAt: game.darts.length };
+    }
+
+    function endGame(game) {
+      return { ...game, ended: true };
+    }
+
+    // Nimmt den letzten Schritt zurück: zuerst ein „Spiel beenden“ (zurück zum Dialog),
+    // sonst den letzten Pfeil samt einer „Weiterspielen“-Entscheidung, die an ihr hing.
+    function undoStep(game) {
+      if (game.ended) return { ...game, ended: false };
+      const darts = game.darts.slice(0, -1);
+      const continuedAt = game.continuedAt > darts.length ? null : game.continuedAt;
+      return { ...game, darts, continuedAt };
+    }
+
+    // Revanche: gleiche Spieler, der bisher Zweite beginnt.
+    function rematch(game) {
+      const [first, ...others] = game.players;
+      return createGame([...others, first]);
+    }
+
+    // Prüft ein gespeichertes Spiel; null, wenn es unbrauchbar ist.
+    function normalizeGame(value) {
+      if (!value || !Array.isArray(value.players) || !Array.isArray(value.darts)) return null;
+      const { players, darts } = value;
+      if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) return null;
+      if (!players.every((p) => typeof p === 'string' && p !== '')) return null;
+      if (!darts.every(isValidScore)) return null;
+
+      const continuedAt = Number.isInteger(value.continuedAt)
+        && value.continuedAt >= 0 && value.continuedAt <= darts.length ? value.continuedAt : null;
+      return { players: players.slice(), darts: darts.slice(), continuedAt, ended: value.ended === true };
+    }
+
+    // Nächster Spieler nach `from`, der noch Punkte hat; null, wenn keiner.
+    function nextPlayer(from, scores) {
+      for (let step = 1; step <= scores.length; step++) {
+        const index = (from + step) % scores.length;
+        if (scores[index] > 0) return index;
+      }
+      return null;
+    }
+
+    // Spielt alle Pfeile nach. Eine Aufnahme endet nach drei Pfeilen, beim Auschecken
+    // oder beim Überwerfen – dann zählt die ganze Aufnahme nicht. Ergebnis:
+    //   scores   – Restpunkte je Spieler
+    //   finished – Spielerindizes in der Reihenfolge, in der sie 0 erreicht haben
+    //   current  – wer dran ist; null, wenn weniger als zwei Spieler übrig sind
+    //   dartNo   – der wievielte Pfeil der aktuellen Aufnahme als Nächstes kommt (1–3)
+    //   last     – letzter Pfeil { player, score, darts, result: 'ok'|'bust'|'finish', rest, turnEnded }
+    //   phase    – 'play' | 'finished' (Finish-Dialog offen) | 'over' (Spiel vorbei)
+    function computeState(game) {
+      const scores = game.players.map(() => START_SCORE);
+      const finished = [];
+      let current = 0;
+      let last = null;
+      let turn = [];
+      let turnStart = START_SCORE;
+
+      for (const score of game.darts) {
+        const player = current;
+        if (turn.length === 0) turnStart = scores[player];
+        turn.push(score);
+        let result = 'bust';
+        if (score <= scores[player]) {
+          scores[player] -= score;
+          result = scores[player] === 0 ? 'finish' : 'ok';
+          if (result === 'finish') finished.push(player);
+        } else {
+          scores[player] = turnStart;
+        }
+        const turnEnded = result !== 'ok' || turn.length === DARTS_PER_TURN;
+        last = { player, score, darts: turn.slice(), result, rest: scores[player], turnEnded };
+        if (turnEnded) {
+          current = nextPlayer(player, scores);
+          turn = [];
+        }
+      }
+
+      const remaining = scores.filter((s) => s > 0).length;
+      if (remaining < 2) current = null;
+
+      let phase = 'play';
+      if (current === null || game.ended) phase = 'over';
+      else if (last?.result === 'finish' && game.continuedAt !== game.darts.length) phase = 'finished';
+
+      return { scores, finished, current, dartNo: turn.length + 1, last, phase };
+    }
+
+    // Rangliste: Fertige in der Reihenfolge ihres Finishs, dann die übrigen nach
+    // Restpunkten. Gleicher Rest ergibt den gleichen Platz.
+    function ranking(state) {
+      const { scores, finished } = state;
+      const placeOf = (player) => {
+        const finishIndex = finished.indexOf(player);
+        if (finishIndex >= 0) return finishIndex + 1;
+        const better = scores.filter((s) => s > 0 && s < scores[player]).length;
+        return finished.length + 1 + better;
+      };
+      return scores
+        .map((score, player) => ({ player, score, place: placeOf(player) }))
+        .sort((a, b) => a.place - b.place || a.player - b.player);
+    }
+  </script>
+
+  <!-- Oberfläche -->
+  <script>
+    const STORAGE_NAMES = 'dart301.names';
+    const STORAGE_GAME = 'dart301.game';
+
+    function storageRead(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw === null ? null : JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+
+    function storageWrite(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        // Ohne localStorage läuft die Seite weiter, nur ohne Gedächtnis.
+      }
+    }
+
+    function storageRemove(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // siehe storageWrite
+      }
+    }
+
+    const $ = (id) => document.getElementById(id);
+
+    let setupNames = normalizeNames(storageRead(STORAGE_NAMES));
+    let game = null;
+
+    function showScreen(id) {
+      for (const screen of document.querySelectorAll('.screen')) {
+        screen.hidden = screen.id !== id;
+      }
+    }
+
+    // --- Startbildschirm ---
+
+    function iconButton(label, ariaLabel, onClick) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'icon-btn';
+      button.textContent = label;
+      button.setAttribute('aria-label', ariaLabel);
+      button.addEventListener('click', onClick);
+      return button;
+    }
+
+    function renderSetup(focusIndex) {
+      const list = $('name-list');
+      const last = setupNames.length - 1;
+      list.replaceChildren();
+
+      setupNames.forEach((name, i) => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = name;
+        input.placeholder = placeholderName(i);
+        input.maxLength = MAX_NAME_LENGTH;
+        input.autocomplete = 'off';
+        input.autocapitalize = 'words';
+        input.spellcheck = false;
+        input.enterKeyHint = i === last ? 'done' : 'next';
+        input.setAttribute('aria-label', `Name Spieler ${i + 1}`);
+        input.addEventListener('input', () => { setupNames[i] = input.value; });
+        input.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          const next = list.querySelectorAll('input')[i + 1];
+          if (next) next.focus(); else input.blur();
+        });
+
+        const up = iconButton('↑', 'Nach oben', () => moveName(i, i - 1));
+        up.disabled = i === 0;
+        const down = iconButton('↓', 'Nach unten', () => moveName(i, i + 1));
+        down.disabled = i === last;
+        const remove = iconButton('✕', 'Entfernen', () => removeName(i));
+        remove.classList.toggle('invisible', setupNames.length <= MIN_PLAYERS);
+
+        const row = document.createElement('li');
+        row.className = 'name-row';
+        row.append(input, up, down, remove);
+        list.append(row);
+      });
+
+      $('add-player').hidden = setupNames.length >= MAX_PLAYERS;
+
+      if (focusIndex !== undefined) list.querySelectorAll('input')[focusIndex]?.focus();
+    }
+
+    function moveName(from, to) {
+      setupNames = moveItem(setupNames, from, to);
+      renderSetup();
+    }
+
+    function removeName(index) {
+      if (setupNames.length <= MIN_PLAYERS) return;
+      setupNames.splice(index, 1);
+      renderSetup();
+    }
+
+    $('add-player').addEventListener('click', () => {
+      if (setupNames.length >= MAX_PLAYERS) return;
+      setupNames.push('');
+      renderSetup(setupNames.length - 1);
+    });
+
+    $('shuffle').addEventListener('click', () => {
+      setupNames = shuffleChanged(setupNames);
+      renderSetup();
+    });
+
+    $('start-game').addEventListener('click', () => {
+      storageWrite(STORAGE_NAMES, setupNames);
+      startGame(createGame(resolveNames(setupNames)));
+    });
+
+    // --- Spielbildschirm ---
+
+    let inputBuffer = '';      // eingetippte Grundzahl
+    let multiplier = 1;        // 1 = Single, 2 = Double, 3 = Triple
+    let restartBuffer = false; // nach 2x/3x beginnt die nächste Ziffer eine neue Zahl
+    let statusMessage = null; // vorübergehende Meldung, z. B. bei ungültiger Eingabe
+
+    function resetInput() {
+      inputBuffer = '';
+      multiplier = 1;
+      restartBuffer = false;
+    }
+
+    // Double gibt es für 1–20 und Bull (25), Triple nur für 1–20.
+    // Ohne Grundzahl ist der Multiplikator immer wählbar, die Zahl folgt dann.
+    function canMultiply(factor) {
+      if (inputBuffer === '' || multiplier === factor) return true;
+      const base = Number(inputBuffer);
+      return (base >= 1 && base <= 20) || (factor === 2 && base === 25);
+    }
+
+    function startGame(newGame) {
+      resetInput();
+      statusMessage = null;
+      game = newGame;
+      storageWrite(STORAGE_GAME, game);
+      buildPlayerList();
+      render();
+    }
+
+    // Zeigt je nach Spielphase den Spiel- oder den Ergebnisbildschirm.
+    function render() {
+      updateWakeLock();
+      const state = computeState(game);
+      if (state.phase === 'over') {
+        showScreen('result');
+        renderResult(state);
+      } else {
+        showScreen('game'); // vor dem Rendern, damit der aktive Spieler ins Bild scrollen kann
+        renderGame(state);
+      }
+    }
+
+    function goToSetup() {
+      game = null;
+      storageRemove(STORAGE_GAME);
+      updateWakeLock();
+      renderSetup();
+      showScreen('setup');
+    }
+
+    // --- Bildschirm anlassen ---
+    // Solange ein Spiel läuft, bleibt das Display an. Der Browser gibt die Sperre frei,
+    // sobald die Seite verdeckt wird; beim Zurückkehren wird sie neu angefordert.
+    // Klappt das nicht (alter Browser, nicht erlaubt), geht der Bildschirm normal aus.
+
+    let wakeLock = null;
+    let wakeLockPending = false;
+
+    async function updateWakeLock() {
+      if (!('wakeLock' in navigator) || wakeLockPending) return;
+      const wanted = game !== null && document.visibilityState === 'visible';
+      wakeLockPending = true;
+      try {
+        if (wanted && !wakeLock) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => { wakeLock = null; });
+        } else if (!wanted && wakeLock) {
+          await wakeLock.release();
+        }
+      } catch {
+        wakeLock = null;
+      } finally {
+        wakeLockPending = false;
+        // Wurde das Spiel verlassen, während die Anforderung lief: gleich wieder freigeben.
+        if (wakeLock && game === null) updateWakeLock();
+      }
+    }
+
+    document.addEventListener('visibilitychange', updateWakeLock);
+
+    // Jede Änderung am Spiel läuft hier durch und wird sofort gespeichert.
+    function updateGame(newGame) {
+      game = newGame;
+      storageWrite(STORAGE_GAME, game);
+    }
+
+    // Die Zeilen werden einmal angelegt und danach nur aktualisiert,
+    // damit die Liste beim Tippen nicht springt.
+    function buildPlayerList() {
+      const list = $('player-list');
+      list.replaceChildren();
+
+      for (const name of game.players) {
+        const nameEl = document.createElement('span');
+        nameEl.className = 'player-name';
+        nameEl.textContent = name;
+
+        const scoreEl = document.createElement('span');
+        scoreEl.className = 'player-score';
+
+        const item = document.createElement('li');
+        item.className = 'player';
+        item.append(nameEl, scoreEl);
+        list.append(item);
+      }
+    }
+
+    function statusFor(state) {
+      if (statusMessage) return statusMessage;
+      const { last } = state;
+      if (!last) return { text: `${game.players[state.current]} beginnt`, kind: '' };
+
+      const name = game.players[last.player];
+      const darts = last.darts.join(' + ');
+      if (last.result === 'bust') return { text: `${name}: ${darts} → Überworfen!`, kind: 'error' };
+      if (last.result === 'finish') return { text: `${name}: ${darts} → Ausgecheckt!`, kind: 'success' };
+      return { text: `${name}: ${darts} → Rest ${last.rest}`, kind: '' };
+    }
+
+    function renderGame(state) {
+      const rows = $('player-list').children;
+
+      state.scores.forEach((score, i) => {
+        const row = rows[i];
+        const scoreEl = row.querySelector('.player-score');
+        scoreEl.textContent = score > 0 ? score : `Platz ${state.finished.indexOf(i) + 1}`;
+        scoreEl.classList.toggle('place', score === 0);
+        row.classList.toggle('active', i === state.current);
+        row.classList.toggle('done', score === 0);
+      });
+      if (state.current !== null) rows[state.current].scrollIntoView({ block: 'nearest' });
+
+      const status = statusFor(state);
+      $('status').textContent = status.text;
+      $('status').className = `status ${status.kind}`;
+
+      $('input-display').textContent = inputBuffer === ''
+        ? `Pfeil ${state.dartNo}`
+        : String(Number(inputBuffer) * multiplier);
+      $('input-display').classList.toggle('empty', inputBuffer === '');
+
+      for (const key of $('keypad').children) key.disabled = state.phase !== 'play';
+      for (const factor of [2, 3]) {
+        const button = $(`mult-${factor}`);
+        button.classList.toggle('active', multiplier === factor);
+        button.setAttribute('aria-pressed', String(multiplier === factor));
+        button.disabled = state.phase !== 'play' || !canMultiply(factor);
+      }
+      $('undo').disabled = game.darts.length === 0;
+
+      $('finish-dialog').hidden = state.phase !== 'finished';
+      if (state.phase === 'finished') {
+        const name = game.players[state.last.player];
+        const place = state.finished.length;
+        $('finish-title').textContent = place === 1 ? `🎯 ${name} gewinnt!` : `${name} belegt Platz ${place}!`;
+        $('continue-game').textContent = `Weiterspielen um Platz ${place + 1}`;
+      }
+    }
+
+    function renderResult(state) {
+      const list = $('ranking');
+      list.replaceChildren();
+
+      for (const { player, score, place } of ranking(state)) {
+        const placeEl = document.createElement('span');
+        placeEl.className = 'rank-place';
+        placeEl.textContent = `${place}.`;
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'player-name';
+        nameEl.textContent = game.players[player];
+
+        const restEl = document.createElement('span');
+        restEl.className = 'rank-rest';
+        restEl.textContent = score > 0 ? `Rest ${score}` : '';
+
+        const item = document.createElement('li');
+        item.className = 'player';
+        item.classList.toggle('rank-first', place === 1);
+        item.append(placeEl, nameEl, restEl);
+        list.append(item);
+      }
+    }
+
+    function pressKey(key) {
+      if (computeState(game).phase !== 'play') return;
+
+      if (key === 'Enter') {
+        submitInput();
+        return;
+      }
+      statusMessage = null;
+      if (key === 'Backspace') {
+        inputBuffer = inputBuffer.slice(0, -1);
+        restartBuffer = false;
+        if (inputBuffer === '') multiplier = 1;
+      } else if (restartBuffer) {
+        inputBuffer = key;
+        restartBuffer = false;
+      } else if (inputBuffer.length < 2) {
+        inputBuffer = inputBuffer === '0' ? key : inputBuffer + key;
+      }
+      render();
+    }
+
+    // 2x/3x schalten um; erneutes Drücken schaltet zurück auf Single.
+    function toggleMultiplier(factor) {
+      if (computeState(game).phase !== 'play' || !canMultiply(factor)) return;
+      statusMessage = null;
+      multiplier = multiplier === factor ? 1 : factor;
+      if (inputBuffer !== '') restartBuffer = true;
+      render();
+    }
+
+    function submitInput() {
+      if (inputBuffer === '') return;
+      const score = Number(inputBuffer) * multiplier;
+      resetInput();
+
+      if (isValidScore(score)) {
+        updateGame(addDart(game, score));
+        statusMessage = null;
+      } else {
+        statusMessage = { text: `${score} ist nicht möglich`, kind: 'error' };
+      }
+      render();
+    }
+
+    function undo() {
+      if (game.ended) {
+        // „Spiel beenden“ zurücknehmen: zurück zum Finish-Dialog
+        updateGame(undoStep(game));
+        statusMessage = null;
+        render();
+        return;
+      }
+      const { last } = computeState(game);
+      if (!last) return;
+      updateGame(undoStep(game));
+      resetInput();
+      statusMessage = { text: `↶ ${game.players[last.player]}: Pfeil ${last.score} zurückgenommen`, kind: '' };
+      render();
+    }
+
+    for (const id of ['undo', 'dialog-undo', 'result-undo']) $(id).addEventListener('click', undo);
+
+    $('continue-game').addEventListener('click', () => {
+      updateGame(continueGame(game));
+      render();
+    });
+
+    $('end-game').addEventListener('click', () => {
+      updateGame(endGame(game));
+      render();
+    });
+
+    $('rematch').addEventListener('click', () => startGame(rematch(game)));
+
+    $('result-new-game').addEventListener('click', goToSetup);
+
+    $('new-game').addEventListener('click', () => {
+      if (game.darts.length > 0 && !confirm('Laufendes Spiel abbrechen und ein neues Spiel anlegen?')) return;
+      goToSetup();
+    });
+
+    // Tasten reagieren schon beim Berühren (pointerdown) statt erst beim Loslassen
+    // (click): Verrutscht der Finger ein wenig, geht der Tipp so nicht mehr verloren.
+    function tapFeedback(button) {
+      button.classList.remove('pressed');
+      void button.offsetWidth;            // Animation neu starten, auch bei schnellem Doppeltipp
+      button.classList.add('pressed');
+      if (navigator.vibrate) navigator.vibrate(10);
+    }
+
+    // Tipp in die Lücke zwischen zwei Tasten: die nächstgelegene Taste zählt.
+    function nearestKey(container, x, y) {
+      let best = null;
+      let bestDist = Infinity;
+      for (const key of container.querySelectorAll('[data-key]')) {
+        const r = key.getBoundingClientRect();
+        const dx = Math.max(r.left - x, 0, x - r.right);
+        const dy = Math.max(r.top - y, 0, y - r.bottom);
+        if (dx * dx + dy * dy < bestDist) { bestDist = dx * dx + dy * dy; best = key; }
+      }
+      return best;
+    }
+
+    $('keypad').addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      const key = event.target.closest('[data-key]') || nearestKey($('keypad'), event.clientX, event.clientY);
+      if (!key || key.disabled) return;
+      tapFeedback(key);
+      pressKey(key.dataset.key);
+    });
+    // Bedienung per Tastatur (Leertaste auf fokussierter Taste) löst nur click aus
+    $('keypad').addEventListener('click', (event) => {
+      const key = event.target.closest('[data-key]');
+      if (event.detail === 0 && key) pressKey(key.dataset.key);
+    });
+
+    for (const factor of [2, 3]) {
+      const button = $(`mult-${factor}`);
+      button.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0 || button.disabled) return;
+        event.preventDefault();
+        tapFeedback(button);
+        toggleMultiplier(factor);
+      });
+      button.addEventListener('click', (event) => {
+        if (event.detail === 0) toggleMultiplier(factor);
+      });
+    }
+
+    // Am PC lässt sich auch mit der Tastatur spielen.
+    document.addEventListener('keydown', (event) => {
+      if ($('game').hidden || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (!/^[0-9]$|^Backspace$|^Enter$/.test(event.key)) return;
+      event.preventDefault();
+      pressKey(event.key);
+    });
+
+    renderSetup();
+
+    // Ein laufendes Spiel wird ohne Nachfrage fortgesetzt.
+    const savedGame = normalizeGame(storageRead(STORAGE_GAME));
+    if (savedGame) startGame(savedGame);
+  </script>
+</body>
+</html>
