@@ -1,6 +1,6 @@
 # TODO: Veröffentlichen auf GitHub Pages
 
-Ziel: Den Dart-Zähler kostenlos unter `https://NICKNAME.github.io/DartPunkte/` erreichbar
+Ziel: Den Dart-Zähler kostenlos unter `https://beneb.github.io/DartPunkte/` erreichbar
 machen, ohne echten Namen und private E-Mail-Adresse preiszugeben.
 
 Gehört zu `TODO.md` → „Später“.
@@ -15,22 +15,22 @@ Gehört zu `TODO.md` → „Später“.
 
 ## 2. Konto anlegen
 
-- [ ] Auf **github.com** auf **Sign up** klicken
-- [ ] E-Mail, Passwort und **Benutzername** eingeben. Am besten einen Nickname wählen,
-      der nicht den echten Namen enthält
-- [ ] Bilderrätsel lösen und den Code aus der Bestätigungsmail eingeben
-- [ ] Fragen zu Team und Interessen überspringen, **Free**-Plan wählen
+- [x] Auf **github.com** auf **Sign up** klicken
+- [x] E-Mail, Passwort und **Benutzername** eingeben. Am besten einen Nickname wählen,
+      der nicht den echten Namen enthält → `beneb`
+- [x] Bilderrätsel lösen und den Code aus der Bestätigungsmail eingeben
+- [x] Fragen zu Team und Interessen überspringen, **Free**-Plan wählen
 
 ## 3. Privatsphäre einstellen
 
 Oben rechts auf das Profilbild klicken, dann **Settings**.
 
 - [ ] **Public profile:** Name leer lassen oder Nickname eintragen; Bio, Ort, Firma und
-      Website leer lassen
-- [ ] **Emails:** Haken bei **„Keep my email addresses private“** setzen
-- [ ] Die angezeigte **noreply-Adresse** notieren
-      (z. B. `12345678+nickname@users.noreply.github.com`), sie wird in Schritt 4 gebraucht
-- [ ] Optional: Haken bei **„Block command line pushes that expose my email“** setzen.
+      Website leer lassen (offen: zuletzt stand dort noch der echte Name)
+- [x] **Emails:** Haken bei **„Keep my email addresses private“** setzen
+- [x] Die angezeigte **noreply-Adresse** notieren
+      → `1087589+beneb@users.noreply.github.com`
+- [x] Optional: Haken bei **„Block command line pushes that expose my email“** setzen.
       Dann lehnt GitHub jeden Push mit der echten Adresse ab (Achtung, siehe Schritt 5)
 - [ ] **Password and authentication:** Zwei-Faktor-Anmeldung mit einer Authenticator-App
       einrichten (verlangt GitHub früher oder später ohnehin)
@@ -42,10 +42,10 @@ Damit künftige Commits Nickname und noreply-Adresse tragen. Mit `--global` gilt
 alle Projekte auf diesem PC. Ohne `--global` (im Projektordner ausgeführt) gilt es nur
 für DartPunkte.
 
-- [ ] Ausführen:
+- [x] Ausgeführt (ohne `--global`, nur für DartPunkte):
       ```
-      git config --global user.name "nickname"
-      git config --global user.email "12345678+nickname@users.noreply.github.com"
+      git config user.name "beneb"
+      git config user.email "1087589+beneb@users.noreply.github.com"
       ```
 
 ## 5. Alte Commits: einmal entscheiden
@@ -62,43 +62,49 @@ entfernte Geburtstagsnachricht steht noch in der Historie.
   ist danach **unwiderruflich** weg. Nur nach Schritt 4 und mit sauberem Arbeitsstand
   ausführen.
 
-- [ ] Variante gewählt: ___
-- [ ] Bei Variante B, im Projektordner:
+- [x] Variante gewählt: **B**
+- [x] Bei Variante B, im Projektordner:
       ```
       git checkout --orphan neu
+      git add -A
       git commit -m "Dart-Zähler"
       git branch -D main
       git branch -m main
       ```
-- [ ] Prüfen, dass nur noch Nickname und noreply-Adresse auftauchen:
+- [x] Prüfen, dass nur noch Nickname und noreply-Adresse auftauchen:
       ```
       git log --format="%an <%ae>"
       ```
 
 ## 6. Repo anlegen und pushen
 
-- [ ] Auf github.com oben rechts auf **+** klicken, dann **New repository**
-- [ ] Name `DartPunkte`, **Public**, *ohne* README, `.gitignore` und Lizenz, dann
+- [x] Auf github.com oben rechts auf **+** klicken, dann **New repository**
+- [x] Name `DartPunkte`, **Public**, *ohne* README, `.gitignore` und Lizenz, dann
       **Create repository**
-- [ ] Bedenken: Im öffentlichen Repo sind auch `PLAN-dartzaehler.md`, `TODO.md` und
+- [x] Bedenken: Im öffentlichen Repo sind auch `PLAN-dartzaehler.md`, `TODO.md` und
       diese Datei lesbar
-- [ ] Vor dem ersten Push den Platzhalter `NICKNAME` im Urheberhinweis durch den echten
+- [x] Vor dem ersten Push den Platzhalter `NICKNAME` im Urheberhinweis durch den echten
       Nickname ersetzen: in `LICENSE`, `index.html` (Kommentar oben und Zeile
       „© 2026 …“ auf dem Startbildschirm) und in den Metadaten der Icons (Claude
       bitten, die Icons mit dem Nickname neu zu erzeugen)
-- [ ] Im Projektordner:
+- [x] Im Projektordner:
       ```
-      git remote add origin https://github.com/nickname/DartPunkte.git
+      git remote add origin https://github.com/beneb/DartPunkte.git
       git push -u origin main
       ```
-- [ ] Beim ersten Push öffnet sich ein Browserfenster zur Anmeldung (Git Credential
+- [x] Beim ersten Push öffnet sich ein Browserfenster zur Anmeldung (Git Credential
       Manager, bei Git für Windows dabei). Danach merkt sich Windows den Login.
+- Stolperstein (gelöst): Push scheiterte mit „No anonymous write access“. Ursache war
+  ein Eintrag `[url "https://:@github.com"] insteadOf = https://github.com` in
+  `~/.gitconfig`, der leere Zugangsdaten mitschickt. Entfernt mit
+  `git config --global --remove-section "url.https://:@github.com"`, außerdem
+  `credential.helper` von `store` auf `manager` gestellt.
 
 ## 7. GitHub Pages einschalten
 
 - [ ] Im Repo auf **Settings**, dann links auf **Pages**
 - [ ] Source: **Deploy from a branch**, Branch **main**, Ordner **/ (root)**, dann **Save**
-- [ ] Nach 1–2 Minuten testen: `https://nickname.github.io/DartPunkte/`
+- [ ] Nach 1–2 Minuten testen: `https://beneb.github.io/DartPunkte/`
 - [ ] Auf dem Handy öffnen und **„Zum Startbildschirm hinzufügen“** wählen
 - [ ] Link an die Freunde schicken (Spielstände bleiben je Browser lokal)
 - Updates danach: einfach `git push`
