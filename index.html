@@ -282,6 +282,33 @@
       text-align: center;
       overflow-wrap: anywhere;
     }
+    /* Sieger: Name groß, blau leuchtend, kurzes Aufploppen */
+    .winner-name {
+      display: block;
+      font-size: 2.6rem;
+      color: var(--mult);
+      text-shadow: 0 0 8px var(--mult), 0 0 22px rgba(108, 200, 255, 0.6);
+      animation: winner-pop 0.6s ease-out, winner-glow 1.6s ease-in-out 0.6s infinite alternate;
+    }
+    @keyframes winner-pop {
+      from { opacity: 0; transform: scale(0.4); }
+      70%  { transform: scale(1.12); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes winner-glow {
+      to { text-shadow: 0 0 4px var(--mult), 0 0 10px rgba(108, 200, 255, 0.35); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .winner-name { animation: none; }
+    }
+    .winner-banner {
+      margin: 8px 0 20px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+    .winner-banner[hidden] { display: none; }
     .link-btn {
       height: 44px;
       border: 0;
@@ -387,6 +414,7 @@
       <button id="result-undo" class="header-btn" type="button">↶ Rückgängig</button>
     </header>
     <div class="scroll">
+      <p id="winner-banner" class="winner-banner" hidden></p>
       <ol id="ranking" class="player-list ranking"></ol>
     </div>
     <footer class="footer">
@@ -861,12 +889,32 @@
       if (state.phase === 'finished') {
         const name = game.players[state.last.player];
         const place = state.finished.length;
-        $('finish-title').textContent = place === 1 ? `🎯 ${name} gewinnt!` : `${name} belegt Platz ${place}!`;
+        const title = $('finish-title');
+        if (place === 1) {
+          // Nur neu aufbauen, wenn sich etwas ändert – sonst startet die Animation bei jedem render() neu
+          showWinner(title, name);
+        } else {
+          title.textContent = `${name} belegt Platz ${place}!`;
+        }
         $('continue-game').textContent = `Weiterspielen um Platz ${place + 1}`;
       }
     }
 
+    // „<Name> hat gewonnen!“ mit leuchtendem Namen. Nur neu aufbauen, wenn sich der
+    // Name ändert – sonst startet die Animation bei jedem render() neu.
+    function showWinner(el, name) {
+      if (el.querySelector('.winner-name')?.textContent === name) return;
+      const nameEl = document.createElement('span');
+      nameEl.className = 'winner-name';
+      nameEl.textContent = name;
+      el.replaceChildren(nameEl, 'hat gewonnen!');
+    }
+
     function renderResult(state) {
+      const banner = $('winner-banner');
+      banner.hidden = state.finished.length === 0;
+      if (state.finished.length > 0) showWinner(banner, game.players[state.finished[0]]);
+
       const list = $('ranking');
       list.replaceChildren();
 
