@@ -364,7 +364,7 @@
       <button id="shuffle" class="btn" type="button">🔀 Mischen</button>
       <button id="start-game" class="btn btn-primary" type="button">Spiel starten</button>
       <!-- Version bei jedem Update hochzählen, damit man am Handy sieht, ob der neue Stand angekommen ist -->
-      <p class="copyright">© 2026 beneb · Alle Rechte vorbehalten · v2</p>
+      <p class="copyright">© 2026 beneb · Alle Rechte vorbehalten · v3</p>
     </footer>
   </section>
 
@@ -1043,9 +1043,20 @@
       return best;
     }
 
+    // Auf Touch-Geräten folgt dem pointerdown beim Loslassen noch ein click an derselben
+    // Stelle. Hat der Tipp den Bildschirm gewechselt (Auschecken → Ergebnis), träfe dieser
+    // click sonst den Knopf, der jetzt dort liegt („Neues Spiel“). Deshalb wird er verschluckt.
+    function swallowNextClick() {
+      const swallow = (event) => { event.stopPropagation(); event.preventDefault(); cleanup(); };
+      const cleanup = () => { document.removeEventListener('click', swallow, true); clearTimeout(timer); };
+      document.addEventListener('click', swallow, true);
+      const timer = setTimeout(cleanup, 600);
+    }
+
     $('keypad').addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       event.preventDefault();
+      swallowNextClick();
       const key = event.target.closest('[data-key]') || nearestKey($('keypad'), event.clientX, event.clientY);
       if (!key || key.disabled) return;
       tapFeedback(key);
